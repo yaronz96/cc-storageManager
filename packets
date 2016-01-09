@@ -1,0 +1,19 @@
+
+function getAck() return "ACK" end
+function getGenericAck() return "%d " .. getAck() end
+
+function getTurtleStatePoll() return "%d " .. getState() .. " REQUEST" end
+
+function getState() return "STATE" end
+function getTurtleFreeStateResponse() return "%d " .. getState() .. " " .. consts.getFreeConst() end
+function getTurtleBusyStateResponse() return "%d " .. getState() .. " " .. consts.getBusyConst() end
+
+function getScan() return "SCAN" end
+function getScanRequest() return "%d " .. getScan() end
+
+function getItem() return "ITEM" end
+function getItemRequest() return "%d " .. getItem() .. " %d %d" end -- first value is the item, second value is the amount
+
+function getTurtleOnline() return "TURTLE ONLINE" end
+function getTurtleOnlineAck() return "TURTLE ONLINE ACK" end
+function getTurtleOffline() return "TURTLE OFFLINE" end

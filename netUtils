@@ -1,0 +1,108 @@
+
+NO_MESSAGE = ''
+RESPONSE_PENDING = 'PENDING'
+RESPONSE_SUCCESSFUL = 'SUCCESSFUL'
+
+responseQueue = {}
+currentMessageId = 0
+
+function pollForResponse(messageId, timeout)
+	-- Polls for a response in the response queue
+	-- return the response of the worker
+    -- default timeout is 5 seconds
+    if timeout == nil then
+        timeout = 5
+    end
+    for i = 1 , timeout do
+    	netUtils.ReceiveNewEvent()
+    	if responseQueue[messageId][2] == RESPONSE_SUCCESSFUL then
+    		return responseQueue[messageId][3]
+    	end
+    	os.sleep(1)
+    end
+    return consts.getError()
+end
+
+function sendMessageNoResponse(id, message, optionalParams)
+	currentMessageId = currentMessageId + 1
+	if optionalParams == nil then
+		rednet.send(id, string.format(message, currentMessageId), consts.getProtocolName())
+	else
+		rednet.send(id, string.format(message, currentMessageId, unpack(optionalParams)), consts.getProtocolName())
+	end
+end
+
+function sendMessage(id, message, optionalParams)
+	-- sends a message to a worker, and adds a response to the queue
+	-- message is a message form packets API
+	currentMessageId = currentMessageId + 1
+	if optionalParams == nil then
+		rednet.send(id, string.format(message, currentMessageId), consts.getProtocolName())
+	else
+		rednet.send(id, string.format(message, currentMessageId, unpack(optionalParams)), consts.getProtocolName())
+	end
+	return addResponseToQueue(id, currentMessageId)
+end
+
+function addResponseToQueue(senderId, messageId)
+	-- adds a response to the response queue
+	responseQueue[messageId] = {senderId, RESPONSE_PENDING, NO_MESSAGE}
+	-- generalUtils.log(messageId .. " is " .. senderId .. " " .. RESPONSE_PENDING)
+	return messageId
+end
+
+function handleNewMessage(senderId, message)
+	-- Handle the message that was given in a new thread (Check the response queue and manage it)
+	if senderId == nil and message == nil then
+		return
+	end
+	generalUtils.log("got message from id: " .. senderId .. " message: " .. message, false)
+	messageId = tonumber(string.match(message, "(%S+)"))
+	if messageId == nil and responseQueue[messageId] == nil then
+		manager.handleNewRequest(senderId, message)
+		return
+	end
+	-- The message is a response, handle it!
+	if responseQueue[messageId][1] ~= senderId then
+		generalUtils.log("Error, message was received from unknown source!")
+	end
+	-- string.match(message, "%s+(.*)") == packets.getAck() and 
+	if responseQueue[messageId][2] == RESPONSE_PENDING then
+		responseQueue[messageId][2] = RESPONSE_SUCCESSFUL
+		responseQueue[messageId][3] = message
+	end
+end
+
+function ReceiveNewEvent()
+	-- Start listening on messages incoming on a new thread. this should be the only thing receiving
+	-- by rednet
+	local timeout = os.startTimer(0)
+	local event = {os.pullEventRaw()}
+	if event[1] == "terminate" then
+		managerUtils.stopManager("User interaction")
+		return
+	elseif event[1] == "timer" and event[2] == timeout then -- check if the event is for the timeout of the event checking
+		return
+	elseif event[1] == 'rednet_message' then
+		if type(event[3]) == 'table' and event[3]['sType'] == 'lookup' then
+            return
+        end
+		netUtils.handleNewMessage(event[2], event[3])
+	elseif event[1] == 'modem_message' then
+
+	end
+	return event[1], event[2]
+end
+
+function registerToProtocol()
+ 	-- Registers to the protocol given as the manager
+ 	rednet.unhost(consts.getProtocolName(), consts.getManagerHostname())
+ 	-- Check if a manager already exists in the protocol, exit if true
+	if table.getn(table.pack(rednet.lookup(consts.getProtocolName(), consts.getManagerHostname()))) ~= 0 then
+		generalUtils.log("Can't initialize manager, " .. consts.getManagerHostname() .. " already exists in protocol " .. consts.getProtocolName())
+		shell.exit()
+	end
+	-- Join the protocol as a manager
+	rednet.host(consts.getProtocolName(), consts.getManagerHostname())
+	generalUtils.log("joined protocol " .. consts.getProtocolName() .. " as " .. consts.getManagerHostname(), false)
+end

@@ -1,0 +1,36 @@
+
+MODEM_SIDE = "top"
+running = true
+
+generalUtils.log("setting sleep to custom sleep function", false)
+sleepOld = os.sleep
+os.sleep = function( _nTime )
+	local timer = os.startTimer( _nTime )
+  
+	repeat
+		local eventType, param = netUtils.ReceiveNewEvent()
+	until param == timer and eventType == 'timer'
+end
+
+function getModemSide()
+	return MODEM_SIDE
+end
+
+function getRunning()
+	return running
+end
+
+function setRunning(isRunning)
+	running = isRunning
+end
+
+function getSleepOld()
+	return sleepOld
+end
+
+function stopManager(reason)
+	generalUtils.log("Terminating program, reason: " .. reason)
+	running = false
+	generalUtils.closeModem(MODEM_SIDE)
+	os.sleep = sleepOld
+end

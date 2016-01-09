@@ -1,0 +1,12 @@
+
+-- Protocol related
+function getProtocolName() return "storageManagement" end
+function getWorkerHostname() return "Worker" .. os.getComputerID() end
+function getManagerHostname() return getProtocolName() .. "Manager" end
+
+-- States
+function getFreeConst() return "FREE" end
+function getBusyConst() return "BUSY" end
+function getUnknownState() return "UNKNOWN" end
+
+function getError() return "error" end

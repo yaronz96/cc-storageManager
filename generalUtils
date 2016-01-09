@@ -1,0 +1,31 @@
+
+LOG_FILE = "log.txt"
+
+local loadedAPIs = {}
+
+function openModem(side)
+  -- opens the wireless modem on the side specified
+  if not rednet.isOpen(side) then
+  	log("Opening wireless modem on " .. side)
+    rednet.open(side)
+  end
+end
+
+function closeModem(side)
+	log("Closing wireless modem on " .. side)
+	rednet.close(side)
+end
+
+function log(message, toPrint)
+	-- logs a message into the log file and print it to the log stream
+	if message == nil then
+		return
+	end
+	if toPrint == nil or toPrint == true then
+		print(message)
+	end
+	local fileHandle = io.open(LOG_FILE, "a")
+	fileHandle:write(os.day() .. " : " .. textutils.formatTime(os.time(), true) .. " ~>\t" .. message .. '\n')
+	fileHandle:flush()
+	fileHandle:close()
+end

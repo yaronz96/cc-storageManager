@@ -1,0 +1,142 @@
+
+os.loadAPI("generalUtils")
+generalUtils.log("------------ STARTING UP MANAGER ------------")
+os.loadAPI("consts")
+os.loadAPI("packets")
+os.loadAPI("netUtils")
+os.loadAPI("managerUtils")
+
+WORKER_REFRESH_INTERVAL = 60 * 5 -- 5 minutes
+
+generalUtils.log("initializing running state", false)
+workers = {}
+time = 0
+
+function getAllWorkersInProtocol()
+	-- returns a table of the IDs of the available workers
+	-- the table has the state of each worker, free or busy
+	allWorkers = table.pack(rednet.lookup(consts.getProtocolName()))
+	for i = 1, table.getn(allWorkers) do
+		if allWorkers[i] == os.getComputerID() then
+			allWorkers[i] = nil
+		end
+	end
+	return initializeWorkersState(allWorkers)
+end
+
+function initializeWorkersState(allWorkers)
+	workerStates = {}
+	for i, workerId in pairs(allWorkers) do
+		state = pollWorkerState(workerId)
+		if state == consts.getUnknownState() then
+			generalUtils.log("worker " .. workerId .. " did not respond, removing from list")
+		else
+			workerStates[workerId] = string.match(state, "(%w+)%s*$")
+		end 
+		-- generalUtils.log("Worker id: " .. workerId .. " is in state " .. string.match(state, "(%w+)%s*$"))
+	end
+	return workerStates
+end
+
+function pollWorkerState(id)
+	-- polls a worker for it's state by the id given
+	messageId = netUtils.sendMessage(id, packets.getTurtleStatePoll())
+	workerState = netUtils.pollForResponse(messageId)
+	if workerState == consts.getError() then
+		generalUtils.log("Worker " .. id .. " did not respond...")
+		return consts.getUnknownState()
+	end
+	return workerState
+end
+
+function findFreeWorker()
+	-- returns the first available worker in the table given
+	-- workers needs to be a table of (worker, state) pairs
+	for worker, state in pairs(workers) do
+		if state == consts.getStateFree() then
+			return worker
+		end
+	end
+	return consts.getError()
+end
+
+function handleNewRequest(senderId, message)
+	if message == packets.getTurtleOnline() then
+		addNewWorker(senderId)
+		netUtils.sendMessageNoResponse(senderId, packets.getTurtleOnlineAck())
+	elseif message == packets.getTurtleOffline() then
+		removeWorker(senderId)
+	end
+end
+
+function sendScanRequest(id)
+	-- sends a request for a worker to scan
+	-- does not wait for response
+	netUtils.sendMessage(id, packets.getScanRequest())
+end
+
+function removeWorker(id)
+	-- remove a worker from the workers list
+	generalUtils.log("worker disconnected: " .. id)
+	workers[id] = nil
+end
+
+function addNewWorker(id)
+	-- Adds a new worker to the worker list and check for it's status
+	-- then send the worker to scan
+	generalUtils.log("new worker connected: " .. id)
+	poll = pollWorkerState(id)
+	if poll == consts.getUnknownState() then
+		generalUtils.log("could not get worker state, removing worker: " .. id)
+	end
+	workers[id] = poll
+	sendScanRequest(id)
+end
+
+function sendItemRequest(itemId, itemAmount)
+	-- Send a request for an item, change state, and add it to responseList
+	workerId = findFreeWorker()
+	if workerId == consts.getError() then
+		generalUtils.log('no workers available at the moment...')
+		return
+	end
+	requestId = netUtils.sendMessage(id, packets.getItemRequest(), {itemId, itemAmount})
+	response = pollForResponse(requestId)
+	if response == consts.getError() then
+		generalUtils.log("worker did not respond, removing worker: ", workerId)
+		removeWorker(worderId)
+	end
+end
+
+function handleUserInput(message)
+	-- Listen to the user input in a new thread and send requests if needed
+
+end
+
+function main()
+	generalUtils.log("Main loop started", false)
+	while managerUtils.getRunning() do
+		if time % WORKER_REFRESH_INTERVAL == 0 then
+			generalUtils.log("refreshing worker list")
+			workers = getAllWorkersInProtocol()
+			generalUtils.log("Current workers: " .. table.getn(workers))
+			for k,v in pairs(workers) do generalUtils.log(k .. " " .. v, false) end
+		end
+
+		netUtils.ReceiveNewEvent()
+		time = time + 1
+		os.sleep(1)
+	end
+	generalUtils.log("Main loop ended...", false)
+end
+
+function startManager()
+	-- Starts listening for messages from user and from protocol and manage the system
+	generalUtils.log("Worker check refresh interval set to " .. WORKER_REFRESH_INTERVAL .. " seconds", false)
+	generalUtils.openModem(managerUtils.getModemSide())
+	netUtils.registerToProtocol()
+	main() -- start
+end
+
+startManager()
+generalUtils.log("- program ended -")
