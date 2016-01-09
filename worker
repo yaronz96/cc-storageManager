@@ -2,15 +2,13 @@
 os.loadAPI("consts")
 os.loadAPI("packets")
 os.loadAPI("generalUtils")
+os.loadAPI("movement")
+os.loadAPI("movementUtils")
 
 MODEM_SIDE = "top"
 
 running = true
 current_task = nil
-current_state = consts.getFreeConst()
-
-GET_ITEM_TASK = 'getItem'
-SCAN_TASK = 'scanNow'
 
 function stopWorker(reason)
     generalUtils.log("stopping worker, reason: " .. reason, false)
@@ -48,9 +46,9 @@ end
 
 function sendState(senderId, messageId)
     local sendingMessage = consts.getUnknownState()
-    if current_state == consts.getFreeConst() then
+    if movementUtils.getCurrentState() == consts.getFreeConst() then
         sendingMessage = string.format(packets.getTurtleFreeStateResponse(), messageId)
-    elseif current_state == consts.getBusyConst() then
+    elseif movementUtils.getCurrentState() == consts.getBusyConst() then
         sendingMessage = string.format(packets.getTurtleBusyStateResponse(), messageId)
     end
     generalUtils.log("sending state to: " .. senderId .. " with message: " .. sendingMessage, false)
@@ -69,19 +67,20 @@ function handleNewMessage(senderId, message)
     end
     message = string.match(message, "%s+(.*)")
     command = string.match(message, "(%S+)")
-    if command == packets.getItem() then
-        current_task = {GET_ITEM_TASK, tonumber(string.match(string.match(message, "(%w+)%s*$"), "(%w+)%s*$")), tonumber(string.match(message, "(%w+)%s*$"))}
+    if command == consts.getItem() then
+        current_task = {movementUtils.getItemTask(), tonumber(string.match(string.match(message, "(%w+)%s*$"), "(%w+)%s*$")), tonumber(string.match(message, "(%w+)%s*$"))}
         sendAck(senderId, messageId)
-    elseif command == packets.getScan() then
-        current_task = {SCAN_TASK}
+    elseif command == consts.getScan() then
+        current_task = {movementUtils.getScanTask()}
         sendAck(senderId, messageId)
-    elseif command == packets.getState() then
+    elseif command == consts.getState() then
         sendState(senderId, messageId)
     end
 end
 
 function doAction()
     -- call the movements from the WIP API (maybe movement/storage)
+    movement.executeNextStep(current_task)
 end
 
 generalUtils.log("-------- STARTING WORKER --------")

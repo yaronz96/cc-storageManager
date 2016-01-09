@@ -10,3 +10,8 @@ function getBusyConst() return "BUSY" end
 function getUnknownState() return "UNKNOWN" end
 
 function getError() return "error" end
+
+function getAck() return "ACK" end
+function getScan() return "SCAN" end
+function getItem() return "ITEM" end
+function getState() return "STATE" end

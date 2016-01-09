@@ -1,0 +1,25 @@
+
+itemDb = {}
+
+function executeNextStep(current_task, current_state)
+  -- Returns the next step in a table.
+  -- for example: {MOVE, forward} {TURN, left}
+  if current_task == nil then
+    return
+  end
+  if current_task[1] == movementUtils.getItemTask() then
+    executeNextMovement(current_task[2], current_task[3])
+  elseif current_task[1] == movementUtils.getScanTask() then
+    scanAndUpdateDb(current_task[2])
+  end
+end
+
+function executeNextMovement(itemId, itemAmount)
+    -- This function executes the next movement according to the
+    -- worker's gps location and the item vector from the itemDb
+    
+end
+
+function scanAndUpdateDb(baseLevel)
+    -- this function executes a full scan (sets to busy)
+end

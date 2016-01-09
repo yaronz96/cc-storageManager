@@ -66,7 +66,7 @@ function handleNewMessage(senderId, message)
 	if responseQueue[messageId][1] ~= senderId then
 		generalUtils.log("Error, message was received from unknown source!")
 	end
-	-- string.match(message, "%s+(.*)") == packets.getAck() and 
+	-- string.match(message, "%s+(.*)") == consts.getAck() and 
 	if responseQueue[messageId][2] == RESPONSE_PENDING then
 		responseQueue[messageId][2] = RESPONSE_SUCCESSFUL
 		responseQueue[messageId][3] = message

@@ -69,10 +69,14 @@ function handleNewRequest(senderId, message)
 	end
 end
 
+function getBaseLevel()
+  
+end
+
 function sendScanRequest(id)
 	-- sends a request for a worker to scan
 	-- does not wait for response
-	netUtils.sendMessage(id, packets.getScanRequest())
+	netUtils.sendMessage(id, string.format(packets.getScanRequest(), getBaseLevel()))
 end
 
 function removeWorker(id)

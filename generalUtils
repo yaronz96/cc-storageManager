@@ -6,7 +6,7 @@ local loadedAPIs = {}
 function openModem(side)
   -- opens the wireless modem on the side specified
   if not rednet.isOpen(side) then
-  	log("Opening wireless modem on " .. side)
+    log("Opening wireless modem on " .. side)
     rednet.open(side)
   end
 end

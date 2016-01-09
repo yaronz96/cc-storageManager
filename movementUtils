@@ -1,0 +1,30 @@
+
+current_state = consts.getFreeConst()
+
+GET_ITEM_TASK = 'getItem'
+SCAN_TASK = 'scanNow'
+
+function getCurrentState()
+  return current_state
+end
+
+function toggleCurrentState()
+  if current_state == consts.getFreeConst() then
+    current_state = consts.getBusyConst()
+  else
+    current_state = consts.getFreeConst()
+  end
+  return current_state
+end
+
+function setCurrentState(state)
+  current_state = state
+end
+
+function getItemTask()
+  return GET_ITEM_TASK
+end
+
+function getScanTask()
+  return SCAN_TASK
+end
